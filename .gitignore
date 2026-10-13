@@ -1,2 +1,11 @@
 version.json
 下載.png
+
+# 摸魚農場：不上傳套件、玩家資料庫與環境設定
+farm-server/node_modules/
+farm-server/data/
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
