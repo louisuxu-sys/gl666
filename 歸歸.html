@@ -567,8 +567,7 @@ header::after{
 </div>
 
 <div class="ps-shell view" id="view-ps" hidden>
-  <iframe id="ps-frame" title="PokéSurvivor 中文版" allow="fullscreen; autoplay; gamepad" referrerpolicy="same-origin"></iframe>
-  <div id="ps-fallback" class="farm-fallback" hidden>寶可夢生存需要連線到<b>遊戲伺服器</b>才能玩，直接開啟檔案無法使用。<br>請改用伺服器網址開啟本頁，例如 <b>http://伺服器電腦的IP:3000</b>。</div>
+  <iframe id="ps-frame" title="PokéSurvivor" allow="fullscreen; autoplay; gamepad" referrerpolicy="strict-origin-when-cross-origin"></iframe>
 </div>
 
 <script>
@@ -957,53 +956,22 @@ document.querySelectorAll(".side-item").forEach(btn => {
   });
 });
 
-/* ---- 寶可夢生存（內嵌 /pokesurvivor/）---- */
-let psTrack = null;
+/* ---- 寶可夢生存：內嵌作者的網站 ----
+ * 作者的網站在不同網域，瀏覽器不允許我們從外面暫停或靜音它；
+ * 所以離開這一頁時直接關掉框架（聲音才會停），回來時重新載入。進行到一半的一局會中斷。 */
+const PS_URL = "https://pokesurvivor.com/";
 const psFrame = () => document.getElementById("ps-frame");
-const psWin = () => { try { return psFrame().contentWindow; } catch (e) { return null; } };
-
-/* 遊戲網址：
- * - 靜態網站（GitHub Pages 等，沒有遊戲伺服器）：同資料夾下的 pokesurvivor-zh/dev.html
- * - 有遊戲伺服器：/pokesurvivor/（先確認它存在，其他情況也退回相對路徑） */
-const STATIC_HOSTS = /\.github\.io$/i;
-async function psSrc(){
-  const rel = new URL("pokesurvivor-zh/dev.html", location.href).href;
-  if (STATIC_HOSTS.test(location.hostname)) return rel;
-  try {
-    const r = await fetch("/pokesurvivor/dev.html", { method: "HEAD", cache: "no-store" });
-    if (r.ok) return "/pokesurvivor/";
-  } catch (e) { /* 沒有伺服器：改用相對路徑 */ }
-  return rel;
-}
 
 function psEnter(){
   const f = psFrame();
-  if (location.protocol === "file:") {
-    f.hidden = true;
-    document.getElementById("ps-fallback").hidden = false;
-    return;
-  }
-  if (!f.getAttribute("src") && !f.dataset.loading) {
-    f.dataset.loading = "1";
-    psSrc().then(u => { f.src = u; });
-  }
-  try {
-    const w = psWin();
-    if (psTrack && w && w.G && w.G.Audio) w.G.Audio.music(psTrack);   // 回來時接回離開前的音樂
-    psTrack = null;
-    f.focus();
-  } catch (e) { /* 遊戲還在載入 */ }
+  if (f.getAttribute("src") !== PS_URL) f.src = PS_URL;
+  try { f.focus(); } catch (e) { /* 忽略 */ }
 }
 
 function psLeave(){
-  try {
-    const w = psWin();
-    if (!w || !w.G || !w.G.Game) return;
-    // 單人遊玩中就先暫停（回來按「繼續」即可）；多人組隊不會被暫停，維持原狀
-    if (w.G.Game.state === "playing" && !(w.G.Coop && w.G.Coop.active)) w.G.Game.togglePause();
-    psTrack = w.G.Audio.track || null;
-    w.G.Audio.music(null);                                              // 離開時停掉音樂，免得在看活動頁時一直響
-  } catch (e) { /* 遊戲還在載入 */ }
+  const f = psFrame();
+  f.removeAttribute("src");            // 關掉遊戲：音樂與遊戲一起停止
+  f.src = "about:blank";
 }
 </script>
 </body>
