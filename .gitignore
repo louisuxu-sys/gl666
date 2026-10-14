@@ -9,3 +9,6 @@ farm-server/data/
 *.db-shm
 .env
 .env.*
+
+# 遊戲自己的 version.json（原作者的版本檔，伺服器會用它）；上面那條只擋朋友的檔案
+!pokesurvivor-zh/version.json
