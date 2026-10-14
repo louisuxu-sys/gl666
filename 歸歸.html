@@ -436,7 +436,7 @@ header::after{
 .side-menu-title{font-family:var(--mono);font-size:10.5px;letter-spacing:.3em;color:var(--ink-faint);padding:0 8px 4px}
 .side-item{
   display:flex;align-items:center;gap:10px;width:100%;cursor:pointer;
-  padding:11px 12px;border-radius:var(--r-md);font:inherit;font-size:14px;letter-spacing:.08em;
+  padding:11px 12px;border-radius:var(--r-md);font:inherit;font-size:14px;letter-spacing:.03em;white-space:nowrap;
   color:var(--ink-dim);background:transparent;border:1px solid transparent;text-align:left;transition:.2s;
 }
 .side-item:hover{color:var(--champagne-hi);border-color:rgba(233,201,118,.2);background:rgba(233,201,118,.05)}
@@ -453,8 +453,10 @@ header::after{
 }
 
 /* Farm view */
-.farm-shell{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:22px 26px 60px}
-.farm-header{padding-bottom:16px;margin-bottom:18px;border-bottom:1px solid var(--edge)}
+.ps-shell{position:fixed;z-index:1;top:0;bottom:0;left:176px;right:0;background:#0b0d12}
+.ps-shell iframe{display:block;width:100%;height:100%;border:0;background:#0b0d12}
+.ps-shell .farm-fallback{margin:24px}
+@media(max-width:1180px){.ps-shell{left:0;bottom:84px}}
 .farm-fallback{padding:20px;border-radius:var(--r-lg);border:1px solid var(--edge);background:rgba(14,15,19,.8);color:var(--ink-dim);font-size:14px;line-height:1.9}
 .farm-fallback b{color:var(--champagne-hi)}
 </style>
@@ -466,7 +468,7 @@ header::after{
 <nav class="side-menu" aria-label="主選單">
   <div class="side-menu-title">選單</div>
   <button type="button" class="side-item on" data-view="view-console"><span class="side-ico">◈</span>活動中控</button>
-  <button type="button" class="side-item" data-view="view-farm"><span class="side-ico">🌱</span>摸魚農場</button>
+  <button type="button" class="side-item" data-view="view-ps"><span class="side-ico">🎮</span>寶可夢生存</button>
 </nav>
 
 <div class="shell view" id="view-console">
@@ -564,15 +566,9 @@ header::after{
   </section>
 </div>
 
-<div class="farm-shell view" id="view-farm" hidden>
-  <header class="farm-header">
-    <div class="titles">
-      <div class="brand">GL 員工休息室</div>
-      <h1>摸魚農場</h1>
-      <div class="tagline">種菜、換裝、經營你的農場</div>
-    </div>
-  </header>
-  <div id="farm-root"></div>
+<div class="ps-shell view" id="view-ps" hidden>
+  <iframe id="ps-frame" title="PokéSurvivor 中文版" allow="fullscreen; autoplay; gamepad" referrerpolicy="same-origin"></iframe>
+  <div id="ps-fallback" class="farm-fallback" hidden>寶可夢生存需要連線到<b>遊戲伺服器</b>才能玩，直接開啟檔案無法使用。<br>請改用伺服器網址開啟本頁，例如 <b>http://伺服器電腦的IP:3000</b>。</div>
 </div>
 
 <script>
@@ -952,31 +948,45 @@ window.__selfTest = function(){
 
 document.querySelectorAll(".side-item").forEach(btn => {
   btn.addEventListener("click", () => {
+    const prev = (document.querySelector(".view:not([hidden])") || {}).id;
     document.querySelectorAll(".side-item").forEach(b => b.classList.toggle("on", b === btn));
     document.querySelectorAll(".view").forEach(v => { v.hidden = v.id !== btn.dataset.view; });
     window.scrollTo(0, 0);
-    if (btn.dataset.view === "view-farm") loadFarm();
+    if (prev === "view-ps" && btn.dataset.view !== "view-ps") psLeave();
+    if (btn.dataset.view === "view-ps") psEnter();
   });
 });
 
-function loadFarm(){
-  if (window.__farmRequested) return;
-  const box = document.getElementById("farm-root");
+/* ---- 寶可夢生存（內嵌 /pokesurvivor/）---- */
+let psTrack = null;
+const psFrame = () => document.getElementById("ps-frame");
+const psWin = () => { try { return psFrame().contentWindow; } catch (e) { return null; } };
+
+function psEnter(){
+  const f = psFrame();
   if (location.protocol === "file:") {
-    box.innerHTML = "<div class=\"farm-fallback\">摸魚農場需要連線到<b>遊戲伺服器</b>才能玩，直接開啟檔案無法使用。<br>請改用伺服器網址開啟本頁，例如 <b>http://伺服器電腦的IP:3000</b>。</div>";
+    f.hidden = true;
+    document.getElementById("ps-fallback").hidden = false;
     return;
   }
-  window.__farmRequested = true;
-  const css = document.createElement("link");
-  css.rel = "stylesheet"; css.href = "/farm/farm.css";
-  document.head.appendChild(css);
-  const js = document.createElement("script");
-  js.src = "/farm/farm.js";
-  js.onerror = () => {
-    window.__farmRequested = false;
-    box.innerHTML = "<div class=\"farm-fallback\">找不到摸魚農場的遊戲伺服器。請確認伺服器已啟動，並用伺服器網址開啟本頁。</div>";
-  };
-  document.body.appendChild(js);
+  if (!f.getAttribute("src")) f.src = "/pokesurvivor/";
+  try {
+    const w = psWin();
+    if (psTrack && w && w.G && w.G.Audio) w.G.Audio.music(psTrack);   // 回來時接回離開前的音樂
+    psTrack = null;
+    f.focus();
+  } catch (e) { /* 遊戲還在載入 */ }
+}
+
+function psLeave(){
+  try {
+    const w = psWin();
+    if (!w || !w.G || !w.G.Game) return;
+    // 單人遊玩中就先暫停（回來按「繼續」即可）；多人組隊不會被暫停，維持原狀
+    if (w.G.Game.state === "playing" && !(w.G.Coop && w.G.Coop.active)) w.G.Game.togglePause();
+    psTrack = w.G.Audio.track || null;
+    w.G.Audio.music(null);                                              // 離開時停掉音樂，免得在看活動頁時一直響
+  } catch (e) { /* 遊戲還在載入 */ }
 }
 </script>
 </body>

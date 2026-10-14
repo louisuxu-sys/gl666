@@ -2,6 +2,7 @@
 const express = require("express");
 const crypto = require("node:crypto");
 const path = require("node:path");
+const fs = require("node:fs");
 const { openDb, tx } = require("./db");
 const game = require("./game");
 const auth = require("./auth");
@@ -17,6 +18,10 @@ function createApp(opts = {}) {
   const guestMode = opts.guestMode ?? process.env.GUEST_MODE !== "0";
   const secureCookie = opts.cookieSecure ?? process.env.COOKIE_SECURE === "1";
   const htmlFile = opts.htmlFile || process.env.HTML_FILE || path.resolve(__dirname, "..", "歸歸.html");
+  // PokéSurvivor 中文版的位置：優先用倉庫內的 ../pokesurvivor-zh，其次是舊的並列資料夾 ../../pokesurvivor-zh。
+  // 都不存在時，/pokesurvivor/ 會回 404。也可用環境變數 PS_DIR 指定。
+  const psCandidates = [path.resolve(__dirname, "..", "pokesurvivor-zh"), path.resolve(__dirname, "..", "..", "pokesurvivor-zh")];
+  const psDir = opts.psDir || process.env.PS_DIR || psCandidates.find((d) => fs.existsSync(path.join(d, "dev.html"))) || psCandidates[0];
   const limiter = auth.createLimiter();
 
   auth.purgeExpiredSessions(db, clock.now());
@@ -38,9 +43,9 @@ function createApp(opts = {}) {
   app.use((req, res, next) => {
     res.set({
       "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "DENY",
+      "X-Frame-Options": "SAMEORIGIN",
       "Referrer-Policy": "same-origin",
-      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     });
     if (req.path.startsWith("/api/")) res.set("Cache-Control", "no-store");
     next();
@@ -52,6 +57,20 @@ function createApp(opts = {}) {
     res.sendFile(htmlFile);
   });
   app.use("/farm", express.static(path.join(__dirname, "public"), { index: false, dotfiles: "ignore" }));
+
+  // PokéSurvivor：只開放遊戲需要的檔案與資料夾（白名單），其他一律 404。
+  // 先把路徑解碼並檢查，擋掉 ..、反斜線與 NUL，避免用 js/../tools 之類的寫法繞過白名單。
+  const PS_FILES = new Set(["dev.html", "favicon.ico", "manifest.webmanifest", "sw.js", "version.json"]);
+  const PS_DIRS = new Set(["js", "css", "assets"]);
+  app.use("/pokesurvivor", (req, res, next) => {
+    let p;
+    try { p = decodeURIComponent(req.path); } catch (_) { return res.status(400).type("text").send("請求格式不正確"); }
+    const seg = p.split("/")[1] || "";
+    const bad = p.includes("..") || p.includes("\\") || p.includes("\0") || p.includes("//");
+    if (bad || !(seg === "" || PS_FILES.has(seg) || PS_DIRS.has(seg))) return res.status(404).type("text").send("找不到頁面");
+    next();
+  });
+  app.use("/pokesurvivor", express.static(psDir, { index: "dev.html", dotfiles: "ignore", etag: true }));
 
   app.use("/api", (req, res, next) => {
     if (req.method === "GET" || req.method === "HEAD") return next();
@@ -194,7 +213,7 @@ function createApp(opts = {}) {
     res.status(500).json({ error: { code: "SERVER_ERROR", message: "伺服器發生錯誤" } });
   });
 
-  return { app, db, close: () => { timers.forEach(clearInterval); db.close(); } };
+  return { app, db, psDir, close: () => { timers.forEach(clearInterval); db.close(); } };
 }
 
 if (require.main === module) {

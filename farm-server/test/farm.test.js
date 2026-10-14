@@ -244,6 +244,92 @@ describe("免登入（匿名玩家）", () => {
   });
 });
 
+describe("PokéSurvivor 靜態檔案（白名單）", () => {
+  let psDir;
+  before(() => {
+    psDir = path.join(tmpDir, "ps");
+    fs.mkdirSync(path.join(psDir, "js"), { recursive: true });
+    fs.mkdirSync(path.join(psDir, "assets"), { recursive: true });
+    fs.mkdirSync(path.join(psDir, "tools"), { recursive: true });
+    fs.mkdirSync(path.join(psDir, ".git"), { recursive: true });
+    fs.writeFileSync(path.join(psDir, "dev.html"), "<!doctype html><title>遊戲首頁</title>");
+    fs.writeFileSync(path.join(psDir, "sw.js"), "// sw");
+    fs.writeFileSync(path.join(psDir, "js", "app.js"), "window.ok=1;");
+    fs.writeFileSync(path.join(psDir, "assets", "a.png"), "PNG");
+    fs.writeFileSync(path.join(psDir, "secret.txt"), "不該被下載");
+    fs.writeFileSync(path.join(psDir, "CLAUDE.md"), "內部規則");
+    fs.writeFileSync(path.join(psDir, "tools", "t.js"), "// 工具");
+    fs.writeFileSync(path.join(psDir, ".git", "config"), "[core]");
+    fs.writeFileSync(path.join(psDir, "js", ".env"), "KEY=1");
+  });
+
+  test("遊戲需要的檔案可以取得，/pokesurvivor/ 預設是 dev.html", async () => {
+    const s = await startServer({ psDir });
+    try {
+      const home = await fetch(`${s.base}/pokesurvivor/`);
+      assert.equal(home.status, 200);
+      assert.match(await home.text(), /遊戲首頁/);
+      assert.equal((await fetch(`${s.base}/pokesurvivor/dev.html`)).status, 200);
+      assert.equal((await fetch(`${s.base}/pokesurvivor/js/app.js`)).status, 200);
+      assert.equal((await fetch(`${s.base}/pokesurvivor/assets/a.png`)).status, 200);
+      assert.equal((await fetch(`${s.base}/pokesurvivor/sw.js`)).status, 200);
+      const noSlash = await fetch(`${s.base}/pokesurvivor`, { redirect: "manual" });
+      assert.ok([301, 302].includes(noSlash.status), "沒有結尾斜線應導向 /pokesurvivor/");
+    } finally { await s.stop(); }
+  });
+
+  test("白名單以外的檔案都不公開，包含各種繞過寫法", async () => {
+    const s = await startServer({ psDir });
+    try {
+      const blocked = [
+        "/pokesurvivor/secret.txt", "/pokesurvivor/CLAUDE.md", "/pokesurvivor/tools/t.js", "/pokesurvivor/.git/config",
+        "/pokesurvivor/js/.env", "/pokesurvivor/js/../secret.txt", "/pokesurvivor/js/../tools/t.js", "/pokesurvivor/assets/../CLAUDE.md",
+        "/pokesurvivor/js/%2e%2e/secret.txt", "/pokesurvivor/js/%2E%2E/tools/t.js", "/pokesurvivor/js%2f..%2fsecret.txt",
+        "/pokesurvivor/js%5c..%5csecret.txt", "/pokesurvivor/%2e%2e/server.js", "/pokesurvivor//secret.txt",
+        "/pokesurvivor/JS/app.js/../../secret.txt", "/pokesurvivor/%00", "/pokesurvivor/dev.html/../secret.txt",
+        "/pokesurvivor/%2e%2e%2f%2e%2e%2fserver.js",
+      ];
+      for (const p of blocked) {
+        const r = await fetch(`${s.base}${p}`);
+        const body = await r.text();
+        assert.ok(r.status >= 400, `${p} 應被拒絕，實際 ${r.status}`);
+        assert.ok(!body.includes("不該被下載") && !body.includes("內部規則") && !body.includes("// 工具") && !body.includes("[core]") && !body.includes("KEY=1"), `${p} 洩漏了內容`);
+      }
+    } finally { await s.stop(); }
+  });
+
+  test("遊戲資料夾不存在時回 404，不會當掉", async () => {
+    const s = await startServer({ psDir: path.join(tmpDir, "不存在的資料夾") });
+    try {
+      assert.equal((await fetch(`${s.base}/pokesurvivor/`)).status, 404);
+      assert.equal((await fetch(`${s.base}/pokesurvivor/js/app.js`)).status, 404);
+      assert.equal((await fetch(`${s.base}/`)).status, 200);
+    } finally { await s.stop(); }
+  });
+
+  test("沒有指定位置時，優先使用倉庫內的 pokesurvivor-zh 資料夾", () => {
+    const saved = process.env.PS_DIR;
+    delete process.env.PS_DIR;
+    const inst = createApp({ dbPath: path.join(tmpDir, "psdir.db") });
+    try {
+      assert.equal(inst.psDir, path.resolve(__dirname, "..", "..", "pokesurvivor-zh"));
+      assert.ok(fs.existsSync(path.join(inst.psDir, "dev.html")), "倉庫內的遊戲資料夾缺少 dev.html");
+    } finally { inst.close(); if (saved !== undefined) process.env.PS_DIR = saved; }
+  });
+
+  test("允許同網站內嵌（SAMEORIGIN），仍拒絕其他網站內嵌", async () => {
+    const s = await startServer({ psDir });
+    try {
+      for (const p of ["/", "/pokesurvivor/", "/api/health"]) {
+        const r = await fetch(`${s.base}${p}`);
+        assert.equal(r.headers.get("x-frame-options"), "SAMEORIGIN", p);
+        // 必須允許自己開的彈窗保持與原頁面的聯繫，否則 Firebase 的 Google 彈窗登入會停在空白頁
+        assert.equal(r.headers.get("cross-origin-opener-policy"), "same-origin-allow-popups", p);
+      }
+    } finally { await s.stop(); }
+  });
+});
+
 describe("請求安全", () => {
   test("缺少標頭或來源網站不符的寫入請求會被拒絕", async () => {
     const s = await startServer();
