@@ -962,6 +962,20 @@ let psTrack = null;
 const psFrame = () => document.getElementById("ps-frame");
 const psWin = () => { try { return psFrame().contentWindow; } catch (e) { return null; } };
 
+/* 遊戲網址：
+ * - 靜態網站（GitHub Pages 等，沒有遊戲伺服器）：同資料夾下的 pokesurvivor-zh/dev.html
+ * - 有遊戲伺服器：/pokesurvivor/（先確認它存在，其他情況也退回相對路徑） */
+const STATIC_HOSTS = /\.github\.io$/i;
+async function psSrc(){
+  const rel = new URL("pokesurvivor-zh/dev.html", location.href).href;
+  if (STATIC_HOSTS.test(location.hostname)) return rel;
+  try {
+    const r = await fetch("/pokesurvivor/dev.html", { method: "HEAD", cache: "no-store" });
+    if (r.ok) return "/pokesurvivor/";
+  } catch (e) { /* 沒有伺服器：改用相對路徑 */ }
+  return rel;
+}
+
 function psEnter(){
   const f = psFrame();
   if (location.protocol === "file:") {
@@ -969,7 +983,10 @@ function psEnter(){
     document.getElementById("ps-fallback").hidden = false;
     return;
   }
-  if (!f.getAttribute("src")) f.src = "/pokesurvivor/";
+  if (!f.getAttribute("src") && !f.dataset.loading) {
+    f.dataset.loading = "1";
+    psSrc().then(u => { f.src = u; });
+  }
   try {
     const w = psWin();
     if (psTrack && w && w.G && w.G.Audio) w.G.Audio.music(psTrack);   // 回來時接回離開前的音樂
