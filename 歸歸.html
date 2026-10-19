@@ -459,6 +459,27 @@ header::after{
 @media(max-width:1180px){.ps-shell{left:0;bottom:84px}}
 .farm-fallback{padding:20px;border-radius:var(--r-lg);border:1px solid var(--edge);background:rgba(14,15,19,.8);color:var(--ink-dim);font-size:14px;line-height:1.9}
 .farm-fallback b{color:var(--champagne-hi)}
+
+/* 限時活動「週一工作日限時優惠」：版面規則取自活動頁原始碼。
+ * 全部限定在 #view-workday，不會影響老友回歸。（音樂功能不放入） */
+#view-workday .tiers{grid-template-columns:repeat(3,1fr)}
+#view-workday .tier{cursor:default}
+#view-workday .panel.control .tier .match{top:auto;bottom:9px}
+#view-workday .panel.control{overflow-x:hidden;overflow-y:auto}
+#view-workday.shell{height:auto;min-height:100vh}
+#view-workday .grid{flex:none;height:auto}
+#view-workday .panel{min-height:620px}
+@media(min-width:1181px) and (min-height:661px){
+  #view-workday.shell{height:100vh;height:100dvh;min-height:0}
+  #view-workday .grid{flex:0 0 calc(100dvh - 130px);height:calc(100dvh - 130px);min-height:0}
+  #view-workday .panel{min-height:0}
+}
+@media(max-width:720px){
+  #view-workday .tiers{grid-template-columns:1fr}
+  #view-workday .header-shell{gap:12px}
+  #view-workday .header-shell .titles{min-width:0}
+  #view-workday .brand-logo{width:104px;height:42px}
+}
 </style>
 </head>
 <body>
@@ -468,6 +489,7 @@ header::after{
 <nav class="side-menu" aria-label="主選單">
   <div class="side-menu-title">選單</div>
   <button type="button" class="side-item on" data-view="view-console"><span class="side-ico">◈</span>活動中控</button>
+  <button type="button" class="side-item" data-view="view-workday"><span class="side-ico">🔥</span>工作日優惠</button>
   <button type="button" class="side-item" data-view="view-ps"><span class="side-ico">🎮</span>寶可夢生存</button>
 </nav>
 
@@ -564,6 +586,73 @@ header::after{
       </div>
     </div>
   </section>
+</div>
+
+<div class="shell view" id="view-workday" hidden>
+  <header>
+    <div class="header-shell">
+      <img class="brand-logo" id="wd-logo" alt="黃金豹品牌 Logo">
+      <div class="titles">
+        <div class="brand">法克U 現在不要鬼叫</div>
+        <h1>週一工作日限時優惠<i class="sparkle s1"></i><i class="sparkle s2"></i></h1>
+        <div class="tagline" id="wd-tagline"></div>
+        <div class="window"><span class="dot"></span><span id="wd-window-text"></span></div>
+      </div>
+    </div>
+    <div class="status" id="wd-status">待輸入</div>
+  </header>
+
+  <div class="grid">
+
+    <section class="panel">
+      <i class="corner tl"></i><i class="corner br"></i>
+      <div class="panel-head"><span class="mark">✦</span><h2>確認文案</h2><span class="rule"></span></div>
+      <div class="script" id="wd-confirm-text"></div>
+      <button class="btn primary" data-copy="wd-confirm-text" data-name="確認文案">複製確認文案</button>
+    </section>
+
+    <section class="panel control">
+      <i class="corner tl"></i><i class="corner br"></i>
+      <div class="panel-head"><span class="mark">✦</span><h2>我就不再場</h2><span class="rule"></span></div>
+
+      <span class="vip-chip">◈ 工作日限時三天 · VIP 1 以上會員</span>
+
+      <div class="field-label"><span>本次儲值金額</span><span class="hint">請輸入實際單筆儲值金額</span></div>
+      <div class="amount-wrap">
+        <span class="sign">$</span>
+        <input id="wd-amount" class="amt-input" type="text" inputmode="numeric" placeholder="例如 12,000" autocomplete="off">
+        <span class="parsed" id="wd-parsed"></span>
+      </div>
+      <div class="field-label"><span>優惠方案</span><span class="hint">依儲值金額自動套用最高一階</span></div>
+      <div class="tiers" id="wd-tiers"></div>
+      <p class="footnote" id="wd-turnover-na">單筆儲值適用一階 · 彩金最高 $10,000</p>
+
+      <div class="readout">
+        <div class="row lead"><span class="k">加贈彩金</span><span class="v" id="wd-out-bonus">—</span></div>
+        <div class="row"><span class="k">須達碼量</span><span class="v" id="wd-out-turnover">—</span></div>
+        <div class="row"><span class="k">適用方案</span><span class="v dim" id="wd-out-gate">—</span></div>
+        <div class="row"><span class="k">備註</span><span class="v dim" id="wd-out-remark">—</span></div>
+      </div>
+      <div class="note" id="wd-note"></div>
+
+      <p class="footnote" id="wd-footnote"></p>
+
+      <div class="chips">
+        <button class="btn" data-wd-copy="promo" data-name="優惠名稱">優惠名稱</button>
+        <button class="btn" data-wd-copy="bonus" data-name="彩金">彩金</button>
+        <button class="btn" data-wd-copy="turnover" data-name="須達碼量">須達碼量</button>
+        <button class="btn" data-wd-copy="remark" data-name="備註">備註</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <i class="corner tl"></i><i class="corner br"></i>
+      <div class="panel-head"><span class="mark">✦</span><h2>結束文案</h2><span class="rule"></span></div>
+      <div class="script" id="wd-finish-text"></div>
+      <button class="btn primary" data-copy="wd-finish-text" data-name="結束文案">複製結束文案</button>
+    </section>
+
+  </div>
 </div>
 
 <div class="ps-shell view" id="view-ps" hidden>
@@ -779,7 +868,7 @@ $("tiers").innerHTML = TIERS.map(t => `
     <span class="payout">$${money(t.bonus)}<small>彩金</small></span>
   </button>`).join("");
 
-document.querySelectorAll(".tier").forEach(el => {
+document.querySelectorAll("#tiers .tier").forEach(el => {
   el.addEventListener("click", () => { $("vip-level").value = el.dataset.key; selected = el.dataset.key; render(); });
 });
 
@@ -835,7 +924,7 @@ function render(){
   p1.classList.toggle("show", showParsed1);
 
   const hasInput = vipRaw.trim() !== "" || depositRaw.trim() !== "";
-  document.querySelectorAll(".tier").forEach(el => {
+  document.querySelectorAll("#tiers .tier").forEach(el => {
     const tier = TIERS.find(t => t.key === el.dataset.key);
     const reached = deposit > 0 && deposit >= tier.min;
     const active = hasInput && current.ok && el.dataset.key === selected;
@@ -944,6 +1033,286 @@ window.__selfTest = function(){
   console.log(fails.length ? "✗ " + fails.length + " 項失敗\n" + fails.join("\n") : "✓ self-test passed");
   return fails;
 };
+
+/* ====== 週一工作日限時優惠（10/19～21）：取自活動頁原始碼 ======
+ * 整段包在函式裡，名稱不會和老友回歸互相覆蓋；元素 id 一律加 "wd-" 前綴；不含音樂功能。
+ * 只共用外面的 copy()（複製）與 setPulsedText()。 */
+(() => {
+const $ = id => document.getElementById("wd-" + id);
+
+const BRAND = "黃金豹";
+const PROMO_NAME = "工作日限時優惠";
+const ACTIVITY_DATE = "10/19（一）～10/21（三）";
+const TAGLINE = "儲值越高回饋越多・最高領 $10,000";
+const QUALIFY_MULTIPLIER = 3;
+const BONUS_CAP = 10000;
+const BALANCE_LIMIT = 100;
+
+const money = n => n.toLocaleString("en-US");
+
+const TIERS = [
+  { key:"T1", min:6000, pct:3 },
+  { key:"T2", min:12000, pct:5 },
+  { key:"T3", min:24000, pct:7 },
+];
+const tierLabel = t => `儲 ${money(t.min)} 送 ${t.pct}%`;
+
+const INELIGIBLE = "不符合資格";
+const APPLICATION_NOTICE = "儲值後未下注前聯繫客服申請。";
+const DAILY_NOTICE = "當日僅能申請一次。";
+const BALANCE_NOTICE = `錢包餘額需在 ${BALANCE_LIMIT} 以內才可申請。`;
+const AUDIENCE_NOTICE = "本優惠僅限 GL黃金豹 VIP 1 以上會員申請。";
+const REVIEW_NOTICE = "黃金豹保有最終審核權，有權拒絕發放彩金。";
+const GAME_RESTRICTION = "領取此優惠者，禁止遊玩「QT 電子－碰撞類遊戲」。";
+const FINAL_RIGHT = "黃金豹保留本活動之最終解釋權。";
+
+const RULES = [
+  `活動時間：${ACTIVITY_DATE}。`,
+  `${TIERS.map(tierLabel).join("、")}，依單筆儲值金額適用最高一階，彩金最高 $${money(BONUS_CAP)}。`,
+  `彩金碼量為（本金＋彩金）* ${QUALIFY_MULTIPLIER} 倍流水後方可申請出款。`,
+  GAME_RESTRICTION,
+  BALANCE_NOTICE,
+  DAILY_NOTICE,
+  APPLICATION_NOTICE,
+  AUDIENCE_NOTICE,
+  REVIEW_NOTICE,
+  FINAL_RIGHT,
+];
+
+const CONFIRM_TERMS = `【活動條款與注意事項】
+${APPLICATION_NOTICE}
+${DAILY_NOTICE}
+${AUDIENCE_NOTICE}
+
+一、誠信原則：本平台所有優惠活動僅針對一般玩家所設立。若發現會員採取不正當手段、利用程式漏洞或違反遊戲規則以套取紅利，本平台有權收回所有點數及紅利，情節嚴重者將採取永久凍結帳號處置。
+
+二、公平審核：為維護遊戲公平性，本平台將對會員投注行為進行嚴格監控。若經查證有違背誠信、欺騙或利用規則進行「無風險獲利」之行為，本公司保留無限期審核、扣回優惠、拒絕發放彩金、修改活動內容等最終解釋權。`;
+
+const toHalfWidth = s => s.replace(/[\uFF01-\uFF5E]/g, c => String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/\u3000/g, " ");
+
+function parseAmount(raw){
+  if(!raw) return 0;
+  let s = toHalfWidth(String(raw).trim())
+    .replace(/[．]/g,".").replace(/[，]/g,",")
+    .replace(/[,\s$＄元]/g,"")
+    .toLowerCase();
+  if(!s) return 0;
+
+  const head = t => { const m = t.match(/^(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+
+  if(s.endsWith("w")) return Math.floor(head(s.slice(0,-1)) * 10000);
+  if(s.endsWith("k")) return Math.floor(head(s.slice(0,-1)) * 1000);
+
+  if(s.includes("萬")){
+    const [l,r] = s.split("萬");
+    let total = Math.floor(head(l || "1") * 10000);
+    const d = (r||"").replace(/\D/g,"");
+    if(d) total += d.length === 1 ? parseInt(d,10)*1000 : parseInt(d,10);
+    return total;
+  }
+  if(s.includes("千")){
+    const [l,r] = s.split("千");
+    let total = Math.floor(head(l || "1") * 1000);
+    const d = (r||"").replace(/\D/g,"");
+    if(d) total += parseInt(d,10);
+    return total;
+  }
+  if(/^\d+(\.\d+)?$/.test(s)) return Math.floor(parseFloat(s));
+  const d = s.replace(/\D/g,"");
+  return d ? parseInt(d,10) : 0;
+}
+
+const tierFor = deposit => [...TIERS].reverse().find(t => deposit >= t.min) || null;
+
+function calculate(depositRaw){
+  const deposit = parseAmount(depositRaw);
+  const tier = tierFor(deposit);
+  const base = { ok:false, tier, deposit, required:0, bonus:0, capped:false, reason:"" };
+  if(deposit <= 0) return { ...base, reason:"請輸入本次實際儲值金額。" };
+  if(!tier) return { ...base, reason:`本次儲值 $${money(deposit)} 未達最低門檻 $${money(TIERS[0].min)}，差額 $${money(TIERS[0].min - deposit)}。` };
+  const raw = Math.floor(deposit * tier.pct / 100);
+  const bonus = Math.min(raw, BONUS_CAP);
+  return { ...base, ok:true, bonus, capped:raw > BONUS_CAP, required:(deposit + bonus) * QUALIFY_MULTIPLIER };
+}
+
+const bonusText = r => `$${money(r.bonus)}`;
+
+function buildConfirm(r){
+  const head = `申請 【${PROMO_NAME}】\n`
+    + `適用方案:${r.tier ? tierLabel(r.tier) : INELIGIBLE}\n`
+    + `本次儲值:${r.deposit > 0 ? "$" + money(r.deposit) : INELIGIBLE}\n`;
+  if(!r.ok){
+    return head
+      + `加贈彩金:${INELIGIBLE}\n`
+      + `${INELIGIBLE}，${r.reason}\n\n`
+      + CONFIRM_TERMS;
+  }
+  return head
+    + `加贈彩金:${bonusText(r)}\n`
+    + `須達碼量:$${money(r.required)}（本金＋彩金）× ${QUALIFY_MULTIPLIER} 倍\n\n`
+    + `${CONFIRM_TERMS}\n\n`
+    + `請問您是否確認申請？`;
+}
+
+function buildFinish(r){
+  if(!r.ok){
+    return `${INELIGIBLE} 【${PROMO_NAME}】\n`
+      + `--------------------------------\n`
+      + `申請項目：${INELIGIBLE}\n`
+      + `本次儲值：${r.deposit > 0 ? money(r.deposit) : INELIGIBLE}\n`
+      + `獲得彩金：${INELIGIBLE}\n`
+      + `--------------------------------\n`
+      + `${INELIGIBLE}，${r.reason}`;
+  }
+  const rules = RULES.map((t,i) => `${i+1}.${t}`).join("\n");
+  return `申請成功 【${PROMO_NAME}】\n`
+    + `--------------------------------\n`
+    + `申請項目：${PROMO_NAME}\n`
+    + `適用方案：${tierLabel(r.tier)}\n`
+    + `本次儲值：${money(r.deposit)}\n`
+    + `獲得彩金：${money(r.bonus)}\n`
+    + `須達碼量：${money(r.required)}\n`
+    + `--------------------------------\n`
+    + `活動規則：\n${rules}\n`
+    + `系統已派發完成，請重新整理頁面查收。`;
+}
+
+function buildRemark(r){
+  if(!r.ok) return INELIGIBLE;
+  const d = new Date();
+  const p = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${PROMO_NAME}-${r.tier.pct}%-$${money(r.bonus)}`;
+}
+
+let current = null;
+
+$("logo").src = (document.querySelector("#view-console .brand-logo") || {}).src || "";
+$("window-text").textContent = ACTIVITY_DATE;
+$("tagline").textContent = TAGLINE;
+
+$("tiers").innerHTML = TIERS.map(t => `
+  <div class="tier" data-key="${t.key}">
+    <span class="match">適用</span>
+    <span class="gate">儲 $${money(t.min)}</span>
+    <span class="payout">${t.pct}%<small>回饋</small></span>
+  </div>`).join("");
+
+function bindAmountField(id){
+  $(id).addEventListener("input", render);
+  $(id).addEventListener("keydown", e => {
+    if(e.key === "Enter"){ e.preventDefault(); e.target.blur(); }
+    if(e.key === "Escape"){ e.target.value = ""; render(); }
+  });
+}
+bindAmountField("amount");
+
+$("footnote").textContent = `${DAILY_NOTICE.replace("。", "")} · 錢包餘額 ${BALANCE_LIMIT} 以內可申請 · 出款需達（本金＋彩金）${QUALIFY_MULTIPLIER} 倍流水`;
+
+function render(){
+  const depositRaw = $("amount").value;
+  current = calculate(depositRaw);
+
+  const deposit = current.deposit;
+  const p1 = $("parsed");
+  const showParsed1 = deposit > 0 && depositRaw.trim() !== money(deposit);
+  p1.textContent = showParsed1 ? `= ${money(deposit)}` : "";
+  p1.classList.toggle("show", showParsed1);
+
+  $("tiers").querySelectorAll(".tier").forEach(el => {
+    const applies = !!current.tier && el.dataset.key === current.tier.key;
+    el.classList.toggle("reached", applies);
+    el.classList.toggle("on", applies && current.ok);
+  });
+
+  const bonusEl = $("out-bonus");
+  setPulsedText(bonusEl, current.ok ? money(current.bonus) : INELIGIBLE);
+  bonusEl.classList.toggle("void", !current.ok);
+  setPulsedText($("out-turnover"), current.required > 0 ? money(current.required) : INELIGIBLE);
+  $("out-gate").textContent = current.tier ? tierLabel(current.tier) : INELIGIBLE;
+  $("out-remark").textContent = buildRemark(current);
+
+  $("note").textContent = current.reason;
+  $("note").classList.toggle("show", !current.ok);
+
+  const st = $("status");
+  if(!depositRaw.trim()){ st.textContent = "待輸入"; st.className = "status"; }
+  else if(current.ok){ st.textContent = "符合資格"; st.className = "status hit"; }
+  else { st.textContent = "未符合資格"; st.className = "status miss"; }
+
+  $("confirm-text").textContent = buildConfirm(current);
+  $("finish-text").textContent = buildFinish(current);
+}
+
+// 「複製確認文案／結束文案」按鈕（data-copy）由外面共用的處理程式負責；這裡只處理四顆小按鈕
+document.querySelectorAll("[data-wd-copy]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const map = {
+      promo: PROMO_NAME,
+      bonus: current.ok ? money(current.bonus) : INELIGIBLE,
+      turnover: current.ok ? money(current.required) : INELIGIBLE,
+      remark: buildRemark(current),
+    };
+    copy(map[btn.dataset.wdCopy], btn, btn.dataset.name);
+  });
+});
+
+render();
+
+window.__wdSelfTest = function(){
+  const fails = [];
+  const eq = (a,b,m) => { if(JSON.stringify(a) !== JSON.stringify(b)) fails.push(`${m}: got ${JSON.stringify(a)}, want ${JSON.stringify(b)}`); };
+
+  [["50000",50000],["5萬",50000],["1.2萬",12000],["2萬4",24000],["12k",12000],["１２０００",12000],["＄12,000",12000],["",0]]
+    .forEach(([i,o]) => eq(parseAmount(i),o,`parseAmount(${i})`));
+
+  [["6000",3,180,18540,false],
+   ["11999",3,359,37074,false],
+   ["12000",5,600,37800,false],
+   ["15000",5,750,47250,false],
+   ["23999",5,1199,75594,false],
+   ["24000",7,1680,77040,false],
+   ["142857",7,9999,458568,false],
+   ["142858",7,10000,458574,false],
+   ["142872",7,10000,458616,true],
+   ["20萬",7,10000,630000,true]].forEach(([d,pct,b,req,cap]) => {
+    const r = calculate(d);
+    eq([r.ok,r.tier && r.tier.pct,r.bonus,r.required,r.capped],[true,pct,b,req,cap],`calculate(${d})`);
+  });
+
+  const short = calculate("5999");
+  eq([short.ok, short.reason.includes("差額 $1")], [false, true], "儲值未達門檻");
+  eq(calculate("").reason, "請輸入本次實際儲值金額。", "儲值留空擋下");
+
+  const okR = calculate("15000");
+  const bc = buildConfirm(okR);
+  ["適用方案:儲 12,000 送 5%","本次儲值:$15,000","加贈彩金:$750","須達碼量:$47,250（本金＋彩金）× 3 倍","請問您是否確認申請？"].forEach(s => {
+    if(!bc.includes(s)) fails.push(`確認文案缺: ${s}`);
+  });
+  [APPLICATION_NOTICE,DAILY_NOTICE,AUDIENCE_NOTICE,"誠信原則","公平審核","拒絕發放彩金、修改活動內容等最終解釋權"].forEach(s => {
+    if(!bc.includes(s)) fails.push(`確認文案缺條款: ${s}`);
+  });
+  const capC = buildConfirm(calculate("200000")), capF = buildFinish(calculate("200000"));
+  if(!capC.includes("加贈彩金:$10,000\n") || !capF.includes("獲得彩金：10,000\n")) fails.push("封頂彩金應為 10,000");
+  if((capC + capF).includes("已達上限")) fails.push("不應顯示已達上限");
+
+  const bf = buildFinish(okR);
+  [`申請成功 【${PROMO_NAME}】`,"適用方案：儲 12,000 送 5%","本次儲值：15,000","獲得彩金：750","須達碼量：47,250","系統已派發完成"].forEach(s => {
+    if(!bf.includes(s)) fails.push(`結束文案缺: ${s}`);
+  });
+  ["活動時間：10/19（一）～10/21（三）。","儲 6,000 送 3%、儲 12,000 送 5%、儲 24,000 送 7%","彩金最高 $10,000","（本金＋彩金）* 3 倍流水",GAME_RESTRICTION,BALANCE_NOTICE,DAILY_NOTICE,APPLICATION_NOTICE,AUDIENCE_NOTICE,REVIEW_NOTICE,FINAL_RIGHT].forEach(s => {
+    if(!bf.includes(s)) fails.push(`結束文案缺規則: ${s}`);
+  });
+  if(!buildFinish(short).includes("差額 $1")) fails.push("不符合文案缺差額");
+
+  const all = [bc, bf, buildConfirm(short), buildFinish(short)].join("\n");
+  ["老友回歸","回歸","90 天","90天","升級","保級","會員等級","錢包餘額:$"].forEach(s => {
+    if(all.includes(s)) fails.push(`殘留內容: ${s}`);
+  });
+
+  console.log(fails.length ? "✗ " + fails.length + " 項失敗\n" + fails.join("\n") : "✓ wd self-test passed");
+  return fails;
+};
+})();
 
 document.querySelectorAll(".side-item").forEach(btn => {
   btn.addEventListener("click", () => {
